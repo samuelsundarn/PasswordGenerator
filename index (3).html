@@ -142,10 +142,9 @@
     <button class="btn copy" id="copyBtn">Copy hashtags</button>
     <button class="btn li" id="openLinkedIn">
       <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="4" fill="#fff"/><path d="M6.9 9.5h2.6V18H6.9zM8.2 5.4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM11 9.5h2.5v1.2c.4-.7 1.3-1.4 2.6-1.4 2.8 0 3.3 1.8 3.3 4.2V18h-2.6v-4c0-1 0-2.2-1.4-2.2s-1.6 1-1.6 2.1V18H11z" fill="#0a66c2"/></svg>
-      <span id="liLabel">Post on LinkedIn</span>
+      <span id="liLabel">Post on LinkedIn with hashtags</span>
     </button>
-    <input type="file" id="liPhoto" accept="image/*" hidden>
-    <span class="hint" id="liHint">Tap, pick or take your photo, then tap <b>Share to LinkedIn</b> and choose LinkedIn. Hashtags are already copied: long-press and paste if they're missing.</span>
+    <span class="hint" id="liHint">Tap, then choose <b>LinkedIn</b> in the share menu. A new post opens with the hashtags in it. Add your photo and tap Post.</span>
     <div class="or">and also post on</div>
     <a class="btn go" href="https://station-h.hexaware.com/" target="_blank" rel="noopener">Open Station H &amp; post now →</a>
     <span class="hint">station-h.hexaware.com · paste the hashtags into your caption</span>
@@ -185,49 +184,24 @@
     }catch(e){}
     return Promise.resolve(fallback(TAGS));
   }
-  var liBtn=document.getElementById('openLinkedIn'),liInput=document.getElementById('liPhoto'),
-      liLabel=document.getElementById('liLabel'),liFile=null;
-  var probe=null;try{probe=new File([new Blob(['x'],{type:'image/png'})],'t.png',{type:'image/png'})}catch(e){}
-  var canFiles=!!(navigator.share&&navigator.canShare&&probe&&navigator.canShare({files:[probe]}));
+  var liBtn=document.getElementById('openLinkedIn');
   var LI_WEB='https://www.linkedin.com/feed/?shareActive=true&text='+encodeURIComponent(TAGS);
+  var isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
 
-  function shareErr(e){
-    if(e&&e.name==='AbortError')return;
-    show('Tap Share to LinkedIn again');
-  }
   function openLI(){
-    if(canFiles){
-      if(!liFile){
-        copyTags();                 // fire copy within the tap
-        liInput.click();            // open camera / gallery within the same tap
-        show('Hashtags copied! Pick your photo 📸');
-        return;
-      }
-      copyTags();
-      navigator.share({files:[liFile],text:TAGS})
-        .then(function(){show('Paste the hashtags if missing, then Post 🚀')})
-        .catch(shareErr);
+    copyTags();   // backup: hashtags on the clipboard in case they're needed
+    if(isMobile&&navigator.share){
+      // Share sheet -> LinkedIn opens a new post with the hashtags already in it
+      navigator.share({text:TAGS}).catch(function(e){
+        if(e&&e.name==='AbortError')return;
+        window.location.href=LI_WEB;
+      });
       return;
     }
-    if(navigator.share){            // phone without file sharing: share the hashtags as text
-      copyTags();
-      navigator.share({text:TAGS}).catch(shareErr);
-      return;
-    }
-    // desktop: copy first, then open LinkedIn's web composer
-    copyTags().then(function(){
-      show('Hashtags copied! Opening LinkedIn…');
-      setTimeout(function(){window.location.href=LI_WEB},600);
-    });
+    // Desktop browser: LinkedIn's web composer opens pre-filled
+    show('Opening LinkedIn…');
+    setTimeout(function(){window.location.href=LI_WEB},500);
   }
-  liInput.addEventListener('change',function(){
-    liFile=liInput.files&&liInput.files[0];
-    if(!liFile)return;
-    liLabel.textContent='Share to LinkedIn →';
-    liBtn.classList.add('ready');
-    show('Photo ready! Tap Share to LinkedIn');
-    liBtn.scrollIntoView({behavior:'smooth',block:'center'});
-  });
   liBtn.addEventListener('click',openLI);
   document.getElementById('topLinkedIn').addEventListener('click',openLI);
 
